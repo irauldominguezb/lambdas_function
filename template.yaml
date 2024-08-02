@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  cars
+
+  Sample SAM Template for cars
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+
+  ApiCarsServices:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Name: cars-api
+
+  GetCarsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_cars/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - x86_64
+      Events:
+        getCars:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiCarsServices
+            Path: /cars
+            Method: get
+
+  SaveCarFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        CodeUri: save_car/
+        Handler: app.lambda_handler
+        Runtime: python3.12
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Architectures:
+          - x86_64
+        Events:
+          saveCar:
+            Type: Api
+            Properties:
+              RestApiId: !Ref ApiCarsServices
+              Path: /cars/save
+              Method: post
+
+  ChangeStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: change_status/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - x86_64
+      Events:
+        changeStatus:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiCarsServices
+            Path: /cars/change_status
+            Method: put
+
+Outputs:
+  GetCarsApi:
+    Description: "API Gateway endpoint URL for Prod stage for GetCars function"
+    Value: !Sub "https://${ApiCarsServices}.execute-api.${AWS::Region}.amazonaws.com/Prod/cars/"
+  SaveCarApi:
+    Description: "API Gateway endpoint URL for Prod stage for SaveCar function"
+    Value: !Sub "https://${ApiCarsServices}.execute-api.${AWS::Region}.amazonaws.com/Prod/cars/save/"
+  ChangeStatusApi:
+    Description: "API Gateway endpoint URL for Prod stage for ChangeStatus function"
+    Value: !Sub "https://${ApiCarsServices}.execute-api.${AWS::Region}.amazonaws.com/Prod/cars/change_status/"
+
